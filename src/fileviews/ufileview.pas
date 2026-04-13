@@ -2992,6 +2992,14 @@ begin
   else
   begin
     PreviousSubDirectory := ExtractFileName(ExcludeTrailingPathDelimiter(CurrentPath));
+  {$IF DEFINED(MSWINDOWS)}
+    // When going up from drive root (E:\), ExtractFileName returns empty.
+    // Use the drive letter with colon (E:) as the name to focus.
+    if (PreviousSubDirectory = '') then
+    begin
+      PreviousSubDirectory := ExcludeTrailingPathDelimiter(CurrentPath);
+    end;
+  {$ENDIF}
 
     sUpLevel:= FileSource.GetParentDir(CurrentPath);
     if sUpLevel <> EmptyStr then
@@ -3010,6 +3018,11 @@ begin
     // Workaround for Search Result File Source
     if FileSource is TSearchResultFileSource then
       SetFileSystemPath(Self, aFile.FullPath)
+{$IF DEFINED(MSWINDOWS)}
+    // At drives root, navigate directly to the drive path
+    else if (Length(aFile.Name) = 2) and (aFile.Name[2] = ':') then
+      CurrentPath := aFile.Name + PathDelim
+{$ENDIF}
     else
       CurrentPath := CurrentPath + IncludeTrailingPathDelimiter(FileSource.GetFileName(aFile));
   end;

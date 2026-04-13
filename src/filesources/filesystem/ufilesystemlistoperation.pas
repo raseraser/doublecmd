@@ -25,7 +25,11 @@ type
 implementation
 
 uses
-  DCOSUtils, uFile, uFindEx, uOSUtils, uFileSystemFileSource;
+  DCOSUtils, uFile, uFindEx, uOSUtils, uFileSystemFileSource
+{$IF DEFINED(MSWINDOWS)}
+  , Windows
+{$ENDIF}
+  ;
 
 procedure TFileSystemListOperation.FlatView(const APath: String);
 var
@@ -62,6 +66,11 @@ var
   AFile: TFile;
   sr: TSearchRecEx;
   IsRootPath, Found: Boolean;
+{$IF DEFINED(MSWINDOWS)}
+  DriveBits: DWORD;
+  DriveNum: Integer;
+  DrivePath: String;
+{$ENDIF}
 begin
   FFiles.Clear;
 
@@ -70,6 +79,25 @@ begin
     FlatView(Path);
     Exit;
   end;
+
+{$IF DEFINED(MSWINDOWS)}
+  // At drives root: list all available drives
+  if ExcludeTrailingPathDelimiter(Path) = '' then
+  begin
+    DriveBits := GetLogicalDrives;
+    for DriveNum := 0 to 25 do
+    begin
+      if ((DriveBits shr DriveNum) and $1) = 0 then
+        Continue;
+      DrivePath := Chr(Ord('A') + DriveNum) + ':\';
+      AFile := TFileSystemFileSource.CreateFile(PathDelim);
+      AFile.Name := Chr(Ord('A') + DriveNum) + ':';
+      AFile.Attributes := faFolder;
+      FFiles.Add(AFile);
+    end;
+    Exit;
+  end;
+{$ENDIF}
 
   IsRootPath := FileSource.IsPathAtRoot(Path);
 
