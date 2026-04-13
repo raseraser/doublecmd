@@ -280,10 +280,22 @@ object frmAbout: TfrmAbout
       ParentColor = False
       ParentFont = False
     end
-    object lblRevision: TLabel
+    object lblCustomBuild: TLabel
       Left = 0
       Height = 15
       Top = 118
+      Width = 120
+      BorderSpacing.CellAlignHorizontal = ccaLeftTop
+      Caption = 'Custom Build by rasercheng'
+      Font.Color = clBlue
+      Font.Style = [fsBold]
+      ParentColor = False
+      ParentFont = False
+    end
+    object lblRevision: TLabel
+      Left = 0
+      Height = 15
+      Top = 137
       Width = 44
       BorderSpacing.CellAlignHorizontal = ccaLeftTop
       Caption = 'Revision'
@@ -293,7 +305,7 @@ object frmAbout: TfrmAbout
     object lblCommit: TLabel
       Left = 0
       Height = 15
-      Top = 137
+      Top = 156
       Width = 44
       BorderSpacing.CellAlignHorizontal = ccaLeftTop
       Caption = 'Commit'
@@ -302,7 +314,7 @@ object frmAbout: TfrmAbout
     object lblBuild: TLabel
       Left = 0
       Height = 15
-      Top = 156
+      Top = 175
       Width = 27
       BorderSpacing.CellAlignHorizontal = ccaLeftTop
       Caption = 'Build'
@@ -312,7 +324,7 @@ object frmAbout: TfrmAbout
     object lblLazarusVer: TLabel
       Left = 0
       Height = 15
-      Top = 175
+      Top = 194
       Width = 39
       BorderSpacing.CellAlignHorizontal = ccaLeftTop
       Caption = 'Lazarus'
@@ -322,7 +334,7 @@ object frmAbout: TfrmAbout
     object lblFreePascalVer: TLabel
       Left = 0
       Height = 15
-      Top = 194
+      Top = 213
       Width = 58
       BorderSpacing.CellAlignHorizontal = ccaLeftTop
       Caption = 'Free Pascal'
@@ -332,7 +344,7 @@ object frmAbout: TfrmAbout
     object lblPlatform: TLabel
       Left = 0
       Height = 1
-      Top = 213
+      Top = 232
       Width = 1
       BorderSpacing.CellAlignHorizontal = ccaLeftTop
       ParentColor = False
@@ -341,7 +353,7 @@ object frmAbout: TfrmAbout
     object lblOperatingSystem: TLabel
       Left = 0
       Height = 1
-      Top = 218
+      Top = 237
       Width = 1
       BorderSpacing.CellAlignHorizontal = ccaLeftTop
       ParentColor = False
@@ -350,7 +362,7 @@ object frmAbout: TfrmAbout
     object lblWidgetsetVer: TLabel
       Left = 0
       Height = 1
-      Top = 223
+      Top = 242
       Width = 1
       BorderSpacing.CellAlignHorizontal = ccaLeftTop
       ParentColor = False

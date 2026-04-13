@@ -38,6 +38,7 @@ type
     btnCopyToClipboard: TButton;
     imgLogo: TImage;
     lblCommit: TLabel;
+    lblCustomBuild: TLabel;
     lblWidgetsetVer: TLabel;
     lblPlatform: TLabel;
     lblOperatingSystem: TLabel;
