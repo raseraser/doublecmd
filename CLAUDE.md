@@ -112,6 +112,11 @@ done
   - `src/filesources/filesystem/ufilesystemlistoperation.pas` — drives listing via GetLogicalDrives
   - `src/fileviews/ufileview.pas` — ChangePathToChild / ChangePathToParent
 
-### 2. About Custom Build Label (`feature/about-custom-build`)
+### 2. Shift+Letter Drive Switch (`feature/shift-letter-drive-switch`)
+- 按 Shift+E 直接切換到 E:\，Shift+C 切換到 C:\ 等（模擬 FreeCommander 行為）
+- Quick Search 開啟時不攔截（仍可正常輸入大寫字母搜尋）
+- 修改檔案：`src/fileviews/uorderedfileview.pas` — DoHandleKeyDown
+
+### 3. About Custom Build Label (`feature/about-custom-build`)
 - About 對話框顯示「Custom Build by rasercheng」藍色粗體標籤
 - 修改檔案：`src/fAbout.pas`, `src/fAbout.lfm`
