@@ -3020,8 +3020,10 @@ begin
       SetFileSystemPath(Self, aFile.FullPath)
 {$IF DEFINED(MSWINDOWS)}
     // At drives root, navigate directly to the drive path
-    else if (Length(aFile.Name) = 2) and (aFile.Name[2] = ':') then
-      CurrentPath := aFile.Name + PathDelim
+    // Name format: "E:" or "E: VolLabel"
+    else if (Length(aFile.Name) >= 2) and (aFile.Name[2] = ':') and
+            ((Length(aFile.Name) = 2) or (aFile.Name[3] = ' ')) then
+      CurrentPath := aFile.Name[1] + ':' + PathDelim
 {$ENDIF}
     else
       CurrentPath := CurrentPath + IncludeTrailingPathDelimiter(FileSource.GetFileName(aFile));
