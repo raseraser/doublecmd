@@ -107,7 +107,7 @@ uses
 
 {$IF DEFINED(MSWINDOWS)}
 {$SETPEOPTFLAGS $140}
-{$R doublecmd.manifest.rc}
+{$R doublecmd.manifest.res}
 {$ENDIF}
 
 {$IFDEF HEAPTRC}
