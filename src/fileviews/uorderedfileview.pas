@@ -125,14 +125,19 @@ implementation
 uses
   LCLProc, Math, Forms, Graphics,
   DCStrUtils,
-  DCOSUtils, 
+  DCOSUtils,
   uLng, uGlobs, uMasks, uDCUtils,
   uFileSourceProperty,
   uPixMapManager,
   uFileViewWorker,
   uFileProperty,
   uFileSource,
-  uFile;
+  uFile,
+  uKeyboard
+{$IF DEFINED(MSWINDOWS)}
+  , fMain, uFileSourceUtil
+{$ENDIF}
+  ;
 
 const
   CANCEL_FILTER = 0;
@@ -309,7 +314,31 @@ end;
 procedure TOrderedFileView.DoHandleKeyDown(var Key: Word; Shift: TShiftState);
 var
   mi: TMenuItem;
+{$IF DEFINED(MSWINDOWS)}
+  DrivePath: String;
+  I: Integer;
+{$ENDIF}
 begin
+{$IF DEFINED(MSWINDOWS)}
+  // Shift+letter switches to drive (e.g. Shift+E -> E:\)
+  if (Shift * KeyModifiersShortcutNoText = []) and
+     (ssShift in Shift) and (Shift * [ssAlt, ssCtrl] = []) and
+     (Key >= VK_A) and (Key <= VK_Z) and
+     (not quickSearch.Visible) then
+  begin
+    DrivePath := Chr(Ord('a') + Key - VK_A) + ':\';
+    for I := 0 to frmMain.Drives.Count - 1 do
+    begin
+      if LowerCase(frmMain.Drives[I]^.Path) = DrivePath then
+      begin
+        SetFileSystemPath(Self, frmMain.Drives[I]^.Path);
+        Key := 0;
+        Exit;
+      end;
+    end;
+  end;
+{$ENDIF}
+
   // check if ShiftState is equal to quick search / filter modes
   if quickSearch.CheckSearchOrFilter(Key) then
     Exit;
