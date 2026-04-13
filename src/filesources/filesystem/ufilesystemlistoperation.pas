@@ -27,7 +27,7 @@ implementation
 uses
   DCOSUtils, uFile, uFindEx, uOSUtils, uFileSystemFileSource
 {$IF DEFINED(MSWINDOWS)}
-  , Windows
+  , Windows, uDrive, uDriveWatcher, uMyWindows, uFileProperty
 {$ENDIF}
   ;
 
@@ -67,9 +67,11 @@ var
   sr: TSearchRecEx;
   IsRootPath, Found: Boolean;
 {$IF DEFINED(MSWINDOWS)}
-  DriveBits: DWORD;
-  DriveNum: Integer;
-  DrivePath: String;
+  DriveList: TDrivesList;
+  Drive: PDrive;
+  DriveIdx: Integer;
+  DriveName: String;
+  FreeSize, TotalSize: Int64;
 {$ENDIF}
 begin
   FFiles.Clear;
@@ -81,19 +83,50 @@ begin
   end;
 
 {$IF DEFINED(MSWINDOWS)}
-  // At drives root: list all available drives
+  // At drives root: list all available drives with full info
   if ExcludeTrailingPathDelimiter(Path) = '' then
   begin
-    DriveBits := GetLogicalDrives;
-    for DriveNum := 0 to 25 do
-    begin
-      if ((DriveBits shr DriveNum) and $1) = 0 then
-        Continue;
-      DrivePath := Chr(Ord('A') + DriveNum) + ':\';
-      AFile := TFileSystemFileSource.CreateFile(PathDelim);
-      AFile.Name := Chr(Ord('A') + DriveNum) + ':';
-      AFile.Attributes := faFolder;
-      FFiles.Add(AFile);
+    DriveList := TDriveWatcher.GetDrivesList;
+    try
+      for DriveIdx := 0 to DriveList.Count - 1 do
+      begin
+        Drive := DriveList[DriveIdx];
+        AFile := TFileSystemFileSource.CreateFile(PathDelim);
+        AFile.Attributes := faFolder;
+
+        // Name: "E: VolLabel" or "H: Label (\\server\share)" for network
+        DriveName := UpCase(Drive^.Path[1]) + ':';
+        if Drive^.DriveLabel <> '' then
+          DriveName := DriveName + ' ' + Drive^.DriveLabel;
+
+        AFile.Name := DriveName;
+
+        // Type: drive type description
+        case Drive^.DriveType of
+          dtHardDisk:     AFile.TypeProperty.Value := 'Local Disk';
+          dtNetwork:      AFile.TypeProperty.Value := 'Network Drive';
+          dtOptical:      AFile.TypeProperty.Value := 'CD/DVD Drive';
+          dtFlash:        AFile.TypeProperty.Value := 'Flash Drive';
+          dtFloppy:       AFile.TypeProperty.Value := 'Floppy Drive';
+          dtRamDisk:      AFile.TypeProperty.Value := 'RAM Disk';
+          dtRemovable,
+          dtRemovableUsb: AFile.TypeProperty.Value := 'Removable Drive';
+        end;
+
+        // Size: total drive size; CompressedSize: free space
+        if Drive^.IsMediaAvailable then
+        begin
+          if uOSUtils.GetDiskFreeSpace(Drive^.Path, FreeSize, TotalSize) then
+          begin
+            AFile.SizeProperty := TFileSizeProperty.Create(TotalSize);
+            AFile.CompressedSizeProperty := TFileCompressedSizeProperty.Create(FreeSize);
+          end;
+        end;
+
+        FFiles.Add(AFile);
+      end;
+    finally
+      FreeAndNil(DriveList);
     end;
     Exit;
   end;
