@@ -117,6 +117,11 @@ done
 - Quick Search 開啟時不攔截（仍可正常輸入大寫字母搜尋）
 - 修改檔案：`src/fileviews/uorderedfileview.pas` — DoHandleKeyDown
 
-### 3. About Custom Build Label (`feature/about-custom-build`)
+### 3. Custom Tab Style (`feature/tab-style`)
+- Tab 有明確邊框分隔、active tab 白底粗體 + 藍色頂線、增加 padding
+- 僅 Windows 平台生效（owner-draw via PaintWindow）
+- 修改檔案：`src/ufileviewnotebook.pas` — PaintWindow / DoChange / constructor
+
+### 4. About Custom Build Label (`feature/about-custom-build`)
 - About 對話框顯示「Custom Build by rasercheng」藍色粗體標籤
 - 修改檔案：`src/fAbout.pas`, `src/fAbout.lfm`
