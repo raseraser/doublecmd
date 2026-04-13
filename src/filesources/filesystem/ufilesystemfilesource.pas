@@ -839,6 +839,11 @@ end;
 
 function TFileSystemFileSource.SetCurrentWorkingDirectory(NewDir: String): Boolean;
 begin
+{$IF DEFINED(MSWINDOWS)}
+  // Drives root is a virtual directory — don't change CWD
+  if ExcludeTrailingPathDelimiter(NewDir) = '' then
+    Exit(True);
+{$ENDIF}
   if not mbDirectoryExists(NewDir) then
     Result := False
   else
@@ -855,13 +860,39 @@ var
   sPath: String;
 begin
   sPath := ExcludeTrailingPathDelimiter(Path);
+{$IF DEFINED(MSWINDOWS)}
+  // Drives root (single backslash) is the true root
+  if Length(sPath) = 0 then
+    Exit(True);
+  // UNC root: \\server\share
+  if (Pos('\\', sPath) = 1) and (NumCountChars(PathDelim, sPath) = 3) then
+    Exit(True);
+  // Drive root like E:\ is NOT root — parent is drives root
+  if (Length(sPath) = 2) and (sPath[2] = ':') then
+    Exit(False);
+  Result := (DCStrUtils.GetParentDir(Path) = '');
+{$ELSE}
   if (Pos('\\', sPath) = 1) and (NumCountChars(PathDelim, sPath) = 3) then
     Exit(True);
   Result := (DCStrUtils.GetParentDir(Path) = '');
+{$ENDIF}
 end;
 
 function TFileSystemFileSource.GetParentDir(sPath: String): String;
+{$IF DEFINED(MSWINDOWS)}
+var
+  sTmp: String;
+{$ENDIF}
 begin
+{$IF DEFINED(MSWINDOWS)}
+  // Drive root (e.g. E:\) -> drives root (\)
+  sTmp := ExcludeTrailingPathDelimiter(sPath);
+  if (Length(sTmp) = 2) and (sTmp[2] = ':') then
+  begin
+    Result := PathDelim;
+    Exit;
+  end;
+{$ENDIF}
   Result:= inherited GetParentDir(sPath);
   Result:= GetDeepestExistingPath(Result);
   if Length(Result) = 0 then Result:= gpExePath;
