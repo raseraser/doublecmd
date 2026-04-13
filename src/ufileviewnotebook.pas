@@ -439,6 +439,9 @@ begin
   // bitmap is temporarily drawn in different position, probably at (0,0) and
   // not where pages contents start (after applying TCM_ADJUSTRECT).
   //DoubleBuffered := True;
+  // Increase tab padding for better visual separation
+  HandleNeeded;
+  Windows.SendMessage(Handle, TCM_SETPADDING, 0, MakeLParam(ScaleX(10, 96), ScaleY(4, 96)));
   {$ENDIF}
 end;
 
@@ -573,18 +576,105 @@ end;
 {$IF DEFINED(LCLWIN32)}
 procedure TFileViewNotebook.PaintWindow(DC: HDC);
 var
+  I: Integer;
   ARect: TRect;
+  TabCanvas: TCanvas;
+  TabText: String;
+  IsActive: Boolean;
+  TextFlags: Cardinal;
+  OldFont: HFONT;
+  NewFont: HFONT;
+  LogFont: TLogFont;
+  BrushColor: TColor;
+  BorderColor: TColor;
+  TextColor: TColor;
 begin
   inherited PaintWindow(DC);
 {$IF DEFINED(DARKWIN)}
   if g_darkModeEnabled then Exit;
 {$ENDIF}
-  if (Win32MajorVersion >= 10) and (PageIndex > -1) then
-  begin
-    ARect:= TabRect(PageIndex);
-    IntersectClipRect(DC, ARect.Left, ARect.Top, ARect.Right, ARect.Top + ScaleY(3, 96));
-    InflateRect(ARect, ScaleX(8, 96), 0);
-    DrawThemeBackground(TWin32ThemeServices(ThemeServices).Theme[teToolBar], DC, TP_BUTTON, TS_CHECKED, ARect, nil);
+
+  if PageCount <= 0 then Exit;
+
+  TabCanvas := TCanvas.Create;
+  try
+    TabCanvas.Handle := DC;
+
+    for I := 0 to PageCount - 1 do
+    begin
+      ARect := TabRect(I);
+      if (ARect.Right <= ARect.Left) or (ARect.Bottom <= ARect.Top) then
+        Continue;
+
+      IsActive := (I = PageIndex);
+
+      // Colors
+      if IsActive then
+      begin
+        BrushColor := clWindow;
+        BorderColor := clHotLight;
+        TextColor := clWindowText;
+      end
+      else begin
+        BrushColor := clBtnFace;
+        BorderColor := clBtnShadow;
+        TextColor := clBtnText;
+      end;
+
+      // Fill background
+      TabCanvas.Brush.Color := BrushColor;
+      TabCanvas.Brush.Style := bsSolid;
+      TabCanvas.FillRect(ARect);
+
+      // Draw border
+      TabCanvas.Pen.Color := BorderColor;
+      TabCanvas.Pen.Style := psSolid;
+      if IsActive then
+        TabCanvas.Pen.Width := ScaleX(2, 96)
+      else
+        TabCanvas.Pen.Width := 1;
+      TabCanvas.Rectangle(ARect);
+
+      // Active tab: draw accent line at top
+      if IsActive then
+      begin
+        TabCanvas.Pen.Color := clHotLight;
+        TabCanvas.Pen.Width := ScaleY(3, 96);
+        TabCanvas.MoveTo(ARect.Left, ARect.Top + 1);
+        TabCanvas.LineTo(ARect.Right, ARect.Top + 1);
+      end;
+
+      // Draw text
+      TabText := Page[I].Caption;
+      InflateRect(ARect, -ScaleX(4, 96), -ScaleY(2, 96));
+
+      // Bold font for active tab
+      if IsActive then
+      begin
+        GetObject(TabCanvas.Font.Handle, SizeOf(LogFont), @LogFont);
+        LogFont.lfWeight := FW_BOLD;
+        NewFont := CreateFontIndirect(LogFont);
+        OldFont := SelectObject(DC, NewFont);
+      end
+      else begin
+        OldFont := 0;
+        NewFont := 0;
+      end;
+
+      SetBkMode(DC, TRANSPARENT);
+      SetTextColor(DC, ColorToRGB(TextColor));
+      TextFlags := DT_SINGLELINE or DT_VCENTER or DT_CENTER or DT_END_ELLIPSIS or DT_NOPREFIX;
+      DrawText(DC, PChar(TabText), Length(TabText), ARect, TextFlags);
+
+      if IsActive and (NewFont <> 0) then
+      begin
+        SelectObject(DC, OldFont);
+        DeleteObject(NewFont);
+      end;
+    end;
+  finally
+    TabCanvas.Handle := 0;
+    TabCanvas.Free;
   end;
 end;
 {$ENDIF}
@@ -834,8 +924,9 @@ begin
   inherited DoChange;
   ActivePage.DoActivate;
 {$IF DEFINED(LCLWIN32)}
-  if (Win32MajorVersion >= 10)
-  {$IF DEFINED(DARKWIN)} and (not g_darkModeEnabled){$ENDIF} then
+  {$IF DEFINED(DARKWIN)}
+  if not g_darkModeEnabled then
+  {$ENDIF}
     Invalidate;
 {$ENDIF}
 end;
