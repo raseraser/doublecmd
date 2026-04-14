@@ -60,6 +60,7 @@ type
     procedure InitializeWnd; override;
     procedure FinalizeWnd; override;
 
+    procedure AutoAdjustColumn(aCol: Integer); override;
     procedure DrawColumnText(aCol, aRow: Integer; aRect: TRect; aState: TGridDrawState); override;
 
     procedure DrawCell(aCol, aRow: Integer; aRect: TRect;
@@ -1346,6 +1347,7 @@ begin
   Align := alClient;
 
   Options := [goFixedVertLine, goFixedHorzLine, goTabs, goRowSelect, goColSizing,
+              goDblClickAutoSize,
               goThumbTracking, goSmoothScroll, goHeaderHotTracking, goHeaderPushedLook];
 
   TitleStyle := gColumnsTitleStyle;
@@ -1478,6 +1480,58 @@ procedure TDrawGridEx.FinalizeWnd;
 begin
   ColumnsView.FinalizeDragDropEx(Self);
   inherited FinalizeWnd;
+end;
+
+procedure TDrawGridEx.AutoAdjustColumn(aCol: Integer);
+var
+  I, TextWidth, MaxWidth: Integer;
+  AFile: TDisplayFile;
+  ColumnsSet: TPanelColumnsClass;
+  OldFontName: String;
+  OldFontSize: Integer;
+  OldFontStyle: TFontStyles;
+begin
+  if not ColumnsView.IsFileIndexInRange(0) then
+    Exit;
+
+  ColumnsSet := ColumnsView.GetColumnsClass;
+
+  // Save and set the column font for accurate measurement
+  OldFontName := Canvas.Font.Name;
+  OldFontSize := Canvas.Font.Size;
+  OldFontStyle := Canvas.Font.Style;
+  Canvas.Font.Name := ColumnsSet.GetColumnFontName(aCol);
+  Canvas.Font.Size := ColumnsSet.GetColumnFontSize(aCol);
+  Canvas.Font.Style := ColumnsSet.GetColumnFontStyle(aCol);
+
+  MaxWidth := 0;
+  for I := 0 to ColumnsView.FFiles.Count - 1 do
+  begin
+    AFile := ColumnsView.FFiles[I];
+    if AFile.DisplayStrings.Count = 0 then
+      ColumnsView.MakeColumnsStrings(AFile, ColumnsSet);
+    if aCol < AFile.DisplayStrings.Count then
+    begin
+      TextWidth := Canvas.TextWidth(AFile.DisplayStrings[aCol]);
+      if TextWidth > MaxWidth then
+        MaxWidth := TextWidth;
+    end;
+  end;
+
+  // Add padding: cell padding on both sides
+  MaxWidth := MaxWidth + 2 * CELL_PADDING;
+
+  // For the name column (0), add icon width
+  if (aCol = 0) and (gShowIcons <> sim_none) then
+    MaxWidth := MaxWidth + gIconsSize + 2;
+
+  // Restore font
+  Canvas.Font.Name := OldFontName;
+  Canvas.Font.Size := OldFontSize;
+  Canvas.Font.Style := OldFontStyle;
+
+  if MaxWidth > 0 then
+    ColWidths[aCol] := MaxWidth;
 end;
 
 procedure TDrawGridEx.DrawColumnText(aCol, aRow: Integer; aRect: TRect;
