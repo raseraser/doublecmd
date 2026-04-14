@@ -321,8 +321,7 @@ var
 begin
 {$IF DEFINED(MSWINDOWS)}
   // Shift+letter switches to drive (e.g. Shift+E -> E:\)
-  if (Shift * KeyModifiersShortcutNoText = []) and
-     (ssShift in Shift) and (Shift * [ssAlt, ssCtrl] = []) and
+  if (ssShift in Shift) and (Shift * [ssAlt, ssCtrl] = []) and
      (Key >= VK_A) and (Key <= VK_Z) and
      (not quickSearch.Visible) then
   begin
