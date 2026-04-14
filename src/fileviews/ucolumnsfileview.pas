@@ -34,6 +34,7 @@ type
 
   TDrawGridEx = class(TFileViewBaseGrid)
   private
+    FMouseDownX: Integer;
     FMouseDownY: Integer;
     FLastMouseMoveTime: QWord;
     FLastMouseScrollTime: QWord;
@@ -51,6 +52,7 @@ type
     procedure DoMouseMoveScroll(X, Y: Integer);
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
     function DoMouseWheelHorz(Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint): Boolean; override;
+    procedure DblClick; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X,Y: Integer); override;
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
     procedure MouseUp(Button: TMouseButton; Shift:TShiftState; X,Y:Integer); override;
@@ -60,6 +62,7 @@ type
     procedure InitializeWnd; override;
     procedure FinalizeWnd; override;
 
+    procedure AutoAdjustColumn(aCol: Integer); override;
     procedure DrawColumnText(aCol, aRow: Integer; aRect: TRect; aState: TGridDrawState); override;
 
     procedure DrawCell(aCol, aRow: Integer; aRect: TRect;
@@ -1480,6 +1483,58 @@ begin
   inherited FinalizeWnd;
 end;
 
+procedure TDrawGridEx.AutoAdjustColumn(aCol: Integer);
+var
+  I, TextWidth, MaxWidth: Integer;
+  AFile: TDisplayFile;
+  ColumnsSet: TPanelColumnsClass;
+  OldFontName: String;
+  OldFontSize: Integer;
+  OldFontStyle: TFontStyles;
+begin
+  if not ColumnsView.IsFileIndexInRange(0) then
+    Exit;
+
+  ColumnsSet := ColumnsView.GetColumnsClass;
+
+  // Save and set the column font for accurate measurement
+  OldFontName := Canvas.Font.Name;
+  OldFontSize := Canvas.Font.Size;
+  OldFontStyle := Canvas.Font.Style;
+  Canvas.Font.Name := ColumnsSet.GetColumnFontName(aCol);
+  Canvas.Font.Size := ColumnsSet.GetColumnFontSize(aCol);
+  Canvas.Font.Style := ColumnsSet.GetColumnFontStyle(aCol);
+
+  MaxWidth := 0;
+  for I := 0 to ColumnsView.FFiles.Count - 1 do
+  begin
+    AFile := ColumnsView.FFiles[I];
+    if AFile.DisplayStrings.Count = 0 then
+      ColumnsView.MakeColumnsStrings(AFile, ColumnsSet);
+    if aCol < AFile.DisplayStrings.Count then
+    begin
+      TextWidth := Canvas.TextWidth(AFile.DisplayStrings[aCol]);
+      if TextWidth > MaxWidth then
+        MaxWidth := TextWidth;
+    end;
+  end;
+
+  // Add padding: cell padding on both sides
+  MaxWidth := MaxWidth + 2 * CELL_PADDING;
+
+  // For the name column (0), add icon width
+  if (aCol = 0) and (gShowIcons <> sim_none) then
+    MaxWidth := MaxWidth + gIconsSize + 2;
+
+  // Restore font
+  Canvas.Font.Name := OldFontName;
+  Canvas.Font.Size := OldFontSize;
+  Canvas.Font.Style := OldFontStyle;
+
+  if MaxWidth > 0 then
+    ColWidths[aCol] := MaxWidth;
+end;
+
 procedure TDrawGridEx.DrawColumnText(aCol, aRow: Integer; aRect: TRect;
   aState: TGridDrawState);
 var
@@ -2138,6 +2193,41 @@ begin
   DoMouseMoveScroll(X, Y);
 end;
 
+procedure TDrawGridEx.DblClick;
+var
+  HitCol, AdjCol: Integer;
+  OffIni, OffEnd: Integer;
+  Tolerance: Integer;
+begin
+  // Check if double-click is on a column boundary in the header area
+  if (FMouseDownY < GetHeaderHeight) and (goColSizing in Options) then
+  begin
+    Tolerance := 4;
+    // Find which column the click is in
+    OffsetToColRow(True, True, FMouseDownX, HitCol, OffIni);
+    if HitCol >= 0 then
+    begin
+      ColRowToOffset(True, True, HitCol, OffIni, OffEnd);
+      // Check if click is near the right edge of a column (resize the clicked column)
+      if Abs(OffEnd - FMouseDownX) <= Tolerance then
+      begin
+        AutoAdjustColumn(HitCol);
+        HeaderSized(True, HitCol);
+        Exit;
+      end;
+      // Check if click is near the left edge (resize the column to the left)
+      if (Abs(OffIni - FMouseDownX) <= Tolerance) and (HitCol > 0) then
+      begin
+        AdjCol := HitCol - 1;
+        AutoAdjustColumn(AdjCol);
+        HeaderSized(True, AdjCol);
+        Exit;
+      end;
+    end;
+  end;
+  inherited DblClick;
+end;
+
 procedure TDrawGridEx.MouseDown(Button: TMouseButton; Shift: TShiftState; X,Y: Integer);
 begin
   FLastMouseMoveTime := 0;
@@ -2151,6 +2241,7 @@ begin
   if ColumnsView.TooManyDoubleClicks then Exit;
 {$ENDIF}
 
+  FMouseDownX := X;
   FMouseDownY := Y;
   ColumnsView.FMainControlMouseDown := True;
 
