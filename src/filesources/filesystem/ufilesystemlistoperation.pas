@@ -134,6 +134,22 @@ begin
 
   IsRootPath := FileSource.IsPathAtRoot(Path);
 
+{$IF DEFINED(MSWINDOWS)}
+  // Windows drive roots (E:\) don't have '..' from FindFirstEx.
+  // Add it explicitly so user can navigate up to drives list.
+  if not IsRootPath then
+  begin
+    DriveName := ExcludeTrailingPathDelimiter(Path);
+    if (Length(DriveName) = 2) and (DriveName[2] = ':') then
+    begin
+      AFile := TFileSystemFileSource.CreateFile(Path);
+      AFile.Name := '..';
+      AFile.Attributes := faFolder;
+      FFiles.Add(AFile);
+    end;
+  end;
+{$ENDIF}
+
   Found := FindFirstEx(FFiles.Path + '*', 0, sr) = 0;
   try
     if not Found then
