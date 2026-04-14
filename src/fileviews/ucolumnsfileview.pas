@@ -34,6 +34,7 @@ type
 
   TDrawGridEx = class(TFileViewBaseGrid)
   private
+    FMouseDownX: Integer;
     FMouseDownY: Integer;
     FLastMouseMoveTime: QWord;
     FLastMouseScrollTime: QWord;
@@ -51,6 +52,7 @@ type
     procedure DoMouseMoveScroll(X, Y: Integer);
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
     function DoMouseWheelHorz(Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint): Boolean; override;
+    procedure DblClick; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X,Y: Integer); override;
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
     procedure MouseUp(Button: TMouseButton; Shift:TShiftState; X,Y:Integer); override;
@@ -2192,6 +2194,41 @@ begin
   DoMouseMoveScroll(X, Y);
 end;
 
+procedure TDrawGridEx.DblClick;
+var
+  HitCol, AdjCol: Integer;
+  OffIni, OffEnd: Integer;
+  Tolerance: Integer;
+begin
+  // Check if double-click is on a column boundary in the header area
+  if (FMouseDownY < GetHeaderHeight) and (goColSizing in Options) then
+  begin
+    Tolerance := 4;
+    // Find which column the click is in
+    OffsetToColRow(True, True, FMouseDownX, HitCol, OffIni);
+    if HitCol >= 0 then
+    begin
+      ColRowToOffset(True, True, HitCol, OffIni, OffEnd);
+      // Check if click is near the right edge of a column (resize the clicked column)
+      if Abs(OffEnd - FMouseDownX) <= Tolerance then
+      begin
+        AutoAdjustColumn(HitCol);
+        HeaderSized(True, HitCol);
+        Exit;
+      end;
+      // Check if click is near the left edge (resize the column to the left)
+      if (Abs(OffIni - FMouseDownX) <= Tolerance) and (HitCol > 0) then
+      begin
+        AdjCol := HitCol - 1;
+        AutoAdjustColumn(AdjCol);
+        HeaderSized(True, AdjCol);
+        Exit;
+      end;
+    end;
+  end;
+  inherited DblClick;
+end;
+
 procedure TDrawGridEx.MouseDown(Button: TMouseButton; Shift: TShiftState; X,Y: Integer);
 begin
   FLastMouseMoveTime := 0;
@@ -2205,6 +2242,7 @@ begin
   if ColumnsView.TooManyDoubleClicks then Exit;
 {$ENDIF}
 
+  FMouseDownX := X;
   FMouseDownY := Y;
   ColumnsView.FMainControlMouseDown := True;
 
