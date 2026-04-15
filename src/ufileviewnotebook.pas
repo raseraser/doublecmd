@@ -662,9 +662,9 @@ begin
       end;
 
       SetBkMode(DC, TRANSPARENT);
-      SetTextColor(DC, ColorToRGB(TextColor));
+      Windows.SetTextColor(DC, ColorToRGB(TextColor));
       TextFlags := DT_SINGLELINE or DT_VCENTER or DT_CENTER or DT_END_ELLIPSIS or DT_NOPREFIX;
-      DrawText(DC, PChar(TabText), Length(TabText), ARect, TextFlags);
+      DrawTextW(DC, PWideChar(UTF8Decode(TabText)), -1, ARect, TextFlags);
 
       if IsActive and (NewFont <> 0) then
       begin
