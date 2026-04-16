@@ -61,6 +61,8 @@ type
     FThumbView: TThumbFileView;
     FUpdateColCount: Integer;
   protected
+    function DoMouseWheelDown(Shift: TShiftState; MousePos: TPoint): Boolean; override;
+    function DoMouseWheelUp(Shift: TShiftState; MousePos: TPoint): Boolean; override;
     procedure KeyDown(var Key : Word; Shift : TShiftState); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
@@ -184,6 +186,56 @@ begin
 end;
 
 { TThumbDrawGrid }
+
+function TThumbDrawGrid.DoMouseWheelDown(Shift: TShiftState; MousePos: TPoint): Boolean;
+const
+  THUMB_ZOOM_STEP = 16;
+  THUMB_MIN_SIZE = 32;
+begin
+  if not FThumbView.IsLoadingFileList then
+  begin
+    if (Shift = [ssCtrl]) then
+    begin
+      if (gThumbSize.cx > THUMB_MIN_SIZE) or (gThumbSize.cy > THUMB_MIN_SIZE) then
+      begin
+        gThumbSize.cx := Max(THUMB_MIN_SIZE, gThumbSize.cx - THUMB_ZOOM_STEP);
+        gThumbSize.cy := Max(THUMB_MIN_SIZE, gThumbSize.cy - THUMB_ZOOM_STEP);
+        UpdateView;
+        FThumbView.Reload;
+      end;
+      Result := True;
+      Exit;
+    end;
+    Result := inherited DoMouseWheelDown(Shift, MousePos);
+  end
+  else
+    Result := True;
+end;
+
+function TThumbDrawGrid.DoMouseWheelUp(Shift: TShiftState; MousePos: TPoint): Boolean;
+const
+  THUMB_ZOOM_STEP = 16;
+  THUMB_MAX_SIZE = 512;
+begin
+  if not FThumbView.IsLoadingFileList then
+  begin
+    if (Shift = [ssCtrl]) then
+    begin
+      if (gThumbSize.cx < THUMB_MAX_SIZE) or (gThumbSize.cy < THUMB_MAX_SIZE) then
+      begin
+        gThumbSize.cx := Min(THUMB_MAX_SIZE, gThumbSize.cx + THUMB_ZOOM_STEP);
+        gThumbSize.cy := Min(THUMB_MAX_SIZE, gThumbSize.cy + THUMB_ZOOM_STEP);
+        UpdateView;
+        FThumbView.Reload;
+      end;
+      Result := True;
+      Exit;
+    end;
+    Result := inherited DoMouseWheelUp(Shift, MousePos);
+  end
+  else
+    Result := True;
+end;
 
 procedure TThumbDrawGrid.KeyDown(var Key: Word; Shift: TShiftState);
 var
