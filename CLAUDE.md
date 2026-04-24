@@ -142,6 +142,25 @@ done
 - 實作方式：修改 `gThumbSize` 全域變數 → 呼叫 `UpdateView` 重新計算 cell 大小 → `FThumbView.Reload` 刷新縮圖
 - 參考 `TBriefDrawGrid` 的 `gZoomWithCtrlWheel` 實作（但縮圖改尺寸而非字型）
 
+### 7. Paste-Path Navigation (`feature/goto-paste-path`)
+- 路徑編輯框（`cm_EditPath`）+ 新 hotkey `Alt+Shift+D`（`cm_PastePathAndGo`）支援：
+  - **git-bash 路徑格式**：`/e/github/foo` → 自動轉成 `E:\github\foo`
+  - **單/雙引號自動 strip**：`"E:\foo bar"` → `E:\foo bar`
+  - **檔案 → parent 目錄 + select 該檔案**（既有行為，整合進新流程）
+  - **目錄 → 進入後游標落在第一個非 `..` 項目**
+- 修改檔案：
+  - `src/udcutils.pas` — `NormalizePastedPath()` helper（去引號 + git-bash 轉換）
+  - `src/filesources/ufilesourceutil.pas` — `NavigatePastedPath()` 共用導航函式
+  - `src/fileviews/ufileview.pas` — 新增 `RequestActiveFirstNonParent: Boolean` public property
+  - `src/fileviews/uorderedfileview.pas` — `ConsumeFirstNonParentRequest()` 在 load 完成後選第一個非 `..`
+  - `src/fileviews/ucolumnsfileview.pas` + `ufileviewwithgrid.pas` — `DisplayFileListChanged` 內 hook flag
+  - `src/fileviews/ufileviewheader.pas` — `onKeyRETURN` 改呼叫 `NavigatePastedPath`
+  - `src/umaincommands.pas` — `cm_PastePathAndGo` 從 clipboard 讀路徑
+  - `src/uglobs.pas` — 預設 hotkey `Alt+Shift+D`
+- **踩過的坑**：
+  1. `RequestActiveFirstNonParent` 一開始放在 `protected` section，從 `ufilesourceutil.pas` (非 descendant) 寫不進去 → 必須移到 `public`。FPC 的 `protected` 同 Delphi：descendant only，不是 same-unit。
+  2. **Race condition**：`ClearFiles` 在新目錄載入前會 fire `fvnDisplayFileListChanged` 但 FFiles 為空。如果這時消費 flag → flag 被吃掉但沒選到檔，等真正 load 完成時 flag 已 clear。修法：`ConsumeFirstNonParentRequest` 看到 `FFiles.Count = 0` 直接 return False，**不**清 flag，讓下次 display update（檔載入後）才消費。
+
 ---
 
 ## 開發 Tips & 踩過的坑總結
