@@ -2384,6 +2384,12 @@ object frmMain: TfrmMain
       Caption = 'Edit path field above file list'
       OnExecute = actExecute
     end
+    object actPastePathAndGo: TAction
+      Tag = 14
+      Category = 'Navigation'
+      Caption = 'Paste path from clipboard and navigate'
+      OnExecute = actExecute
+    end
     object actChangeDir: TAction
       Tag = 14
       Category = 'Navigation'
