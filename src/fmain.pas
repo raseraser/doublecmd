@@ -102,6 +102,7 @@ type
     actCopyNoAsk: TAction;
     actChangeDirToParent: TAction;
     actEditPath: TAction;
+    actPastePathAndGo: TAction;
     actHorizontalFilePanels: TAction;
     actGoToFirstEntry: TAction;
     actGoToLastEntry: TAction;
