@@ -160,6 +160,13 @@ done
 - **踩過的坑**：
   1. `RequestActiveFirstNonParent` 一開始放在 `protected` section，從 `ufilesourceutil.pas` (非 descendant) 寫不進去 → 必須移到 `public`。FPC 的 `protected` 同 Delphi：descendant only，不是 same-unit。
   2. **Race condition**：`ClearFiles` 在新目錄載入前會 fire `fvnDisplayFileListChanged` 但 FFiles 為空。如果這時消費 flag → flag 被吃掉但沒選到檔，等真正 load 完成時 flag 已 clear。修法：`ConsumeFirstNonParentRequest` 看到 `FFiles.Count = 0` 直接 return False，**不**清 flag，讓下次 display update（檔載入後）才消費。
+  3. **新 cm_ command 三個地方都要動**（看 `umaincommands.pas` 開頭的 RECIPE 註解）：
+     - `umaincommands.pas` — 在 `published` 區宣告 + 實作 procedure
+     - `fmain.lfm` — 加 `actXxxName: TAction` entry（同 cm_ 名），category + tag 跟相鄰命令一致
+     - `fmain.pas` — 在 TfrmMain 的 published fields 加 `actXxxName: TAction;`
+     - `uglobs.pas` — 加 `AddIfNotExists` 預設 hotkey
+     少了 fmain action → 按 hotkey 系統會 **「ding」** 但無作用（dispatcher 找不到 action）。
+  4. **bump `hkVersion`**（`uglobs.pas`）才會讓 `LoadDefaultHotkeyBindings` 重跑進新預設 binding。判斷式是 `HotMan.Version < hkVersion`，沒 bump → 既有 install 的 `shortcuts.scf` 不會吃到新 hotkey。
 
 ---
 
