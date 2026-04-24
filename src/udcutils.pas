@@ -84,6 +84,10 @@ function mbExpandFileName(const sFileName: String): String;
 {en
    Normalizes a path string that was pasted from clipboard or typed manually:
    - Trims whitespace
+   - Collapses embedded line wraps (newline + leading whitespace on the
+     next line). Joins with no separator when the wrap is adjacent to a
+     path separator ('/' or '\'); otherwise inserts a single space (so a
+     wrap that fell on a real space inside a filename is preserved).
    - Strips a single pair of surrounding double or single quotes
    - On Windows, converts MSYS / git-bash style "/c/Users/foo" to "C:\Users\foo"
    Returns the path unchanged if no transformation applies.
@@ -403,8 +407,40 @@ function NormalizePastedPath(const Path: String): String;
 var
   Tail: String;
 {$ENDIF}
+
+  function CollapseLineWraps(const S: String): String;
+  var
+    I, Len: Integer;
+    PrevChar, NextChar: Char;
+  begin
+    Result := '';
+    Len := Length(S);
+    I := 1;
+    while I <= Len do
+    begin
+      if S[I] in [#13, #10] then
+      begin
+        // skip the newline + the indent on the continuation line
+        while (I <= Len) and (S[I] in [#13, #10, ' ', #9]) do
+          Inc(I);
+        if (Result = '') or (I > Len) then Continue;
+        PrevChar := Result[Length(Result)];
+        NextChar := S[I];
+        // join silently if the wrap touches a path separator;
+        // otherwise the wrap likely fell on a real space inside a name
+        if not ((PrevChar in ['/', '\']) or (NextChar in ['/', '\'])) then
+          Result := Result + ' ';
+      end
+      else
+      begin
+        Result := Result + S[I];
+        Inc(I);
+      end;
+    end;
+  end;
+
 begin
-  Result := Trim(Path);
+  Result := Trim(CollapseLineWraps(Trim(Path)));
   if Length(Result) >= 2 then
   begin
     if ((Result[1] = '"') and (Result[Length(Result)] = '"')) or
