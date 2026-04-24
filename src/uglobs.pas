@@ -1188,6 +1188,7 @@ begin
       AddIfNotExists(['Alt+V'],[],'cm_OperationsViewer');
       AddIfNotExists(['Alt+X'],[],'cm_Exit');
       AddIfNotExists(['Alt+Z'],[],'cm_TargetEqualSource');
+      AddIfNotExists(['Alt+Shift+D'],[],'cm_PastePathAndGo');
       AddIfNotExists(['Alt+F1'],[],'cm_LeftOpenDrives');
       AddIfNotExists(['Alt+F2'],[],'cm_RightOpenDrives');
       AddIfNotExists(['Alt+F5'],[],'cm_PackFiles');

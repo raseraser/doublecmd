@@ -98,6 +98,12 @@ type
        @returns(@true if the file was found and selected.)
     }
     function SetActiveFileNow(aFilePath: String; ScrollTo: Boolean = True; aLastTopRowIndex: PtrInt = -1): Boolean;
+    {en
+       If RequestActiveFirstNonParent is set, position cursor on the first
+       non-".." entry (or row 0 if none exists). Clears the flag and returns
+       True when consumed.
+    }
+    function ConsumeFirstNonParentRequest(ScrollTo: Boolean = True): Boolean;
 
     procedure PropertiesRetrieverOnAbort(AStart: Integer; AList: TFPList);
 
@@ -972,6 +978,31 @@ begin
     end;
   end;
   Result := False;
+end;
+
+function TOrderedFileView.ConsumeFirstNonParentRequest(ScrollTo: Boolean): Boolean;
+var
+  I, TargetIndex: Integer;
+begin
+  Result := False;
+  if not RequestActiveFirstNonParent then Exit;
+  RequestActiveFirstNonParent := False;
+  if FFiles.Count = 0 then Exit;
+
+  TargetIndex := -1;
+  for I := 0 to FFiles.Count - 1 do
+    if FFiles[I].FSFile.Name <> '..' then
+    begin
+      TargetIndex := I;
+      Break;
+    end;
+  if TargetIndex < 0 then TargetIndex := 0;
+
+  FUpdatingActiveFile := True;
+  SetActiveFile(TargetIndex, ScrollTo, -1);
+  FUpdatingActiveFile := False;
+  SetLastActiveFile(TargetIndex, -1);
+  Result := True;
 end;
 
 procedure TOrderedFileView.PropertiesRetrieverOnAbort(AStart: Integer; AList: TFPList);

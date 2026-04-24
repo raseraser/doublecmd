@@ -578,7 +578,9 @@ begin
   SetFilesDisplayItems;
   dgPanel.EndUpdate;
 
-  if SetActiveFileNow(RequestedActiveFile, True, FLastTopRowIndex) then
+  if RequestActiveFirstNonParent and ConsumeFirstNonParentRequest(True) then
+    RequestedActiveFile := ''
+  else if SetActiveFileNow(RequestedActiveFile, True, FLastTopRowIndex) then
     RequestedActiveFile := ''
   else
     // Requested file was not found, restore position to last active file.

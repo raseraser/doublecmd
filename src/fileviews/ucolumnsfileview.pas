@@ -1027,7 +1027,9 @@ begin
   RedrawFiles;
   dgPanel.EndUpdate;
 
-  if SetActiveFileNow(RequestedActiveFile, True, FLastTopRowIndex) then
+  if RequestActiveFirstNonParent and ConsumeFirstNonParentRequest(True) then
+    RequestedActiveFile := ''
+  else if SetActiveFileNow(RequestedActiveFile, True, FLastTopRowIndex) then
     RequestedActiveFile := ''
   // Requested file was not found, restore position to last active file.
   else if not SetActiveFileNow(LastActiveFile, ScrollTo, FLastTopRowIndex) then

@@ -233,6 +233,7 @@ type
    procedure cm_CheckSumVerify(const Params: array of string);
    procedure cm_Edit(const Params: array of string);
    procedure cm_EditPath(const Params: array of string);
+   procedure cm_PastePathAndGo(const Params: array of string);
    procedure cm_MakeDir(const Params: array of string);
    procedure cm_Rename(const Params: array of string);
    procedure cm_RenameNoAsk(const Params: array of string);
@@ -2442,6 +2443,16 @@ end;
 procedure TMainCommands.cm_EditPath(const Params: array of string);
 begin
   if gCurDir then frmMain.ActiveFrame.ExecuteCommand('cm_EditPath', Params);
+end;
+
+procedure TMainCommands.cm_PastePathAndGo(const Params: array of string);
+var
+  ClipText: String;
+begin
+  if not Clipboard.HasFormat(CF_TEXT) then Exit;
+  ClipText := Clipboard.AsText;
+  if Trim(ClipText) = '' then Exit;
+  NavigatePastedPath(frmMain.ActiveFrame, ClipText);
 end;
 
 // Parameters:
