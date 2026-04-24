@@ -368,13 +368,13 @@ type
     property History: TFileViewHistory read FHistory;
     property LastActiveFile: String read FLastActiveFile write FLastActiveFile;
     property RequestedActiveFile: String read FRequestedActiveFile write FRequestedActiveFile;
-    property RequestActiveFirstNonParent: Boolean read FRequestActiveFirstNonParent write FRequestActiveFirstNonParent;
     property SortingForSorter: TFileSortings read GetSortingForSorter;
     property WorkersThread: TFunctionThread read GetWorkersThread;
 
   public
     property  DisplayFiles: TDisplayFiles read FFiles;
     property Active: Boolean read FActive write SetActive;
+    property RequestActiveFirstNonParent: Boolean read FRequestActiveFirstNonParent write FRequestActiveFirstNonParent;
 
   public
     constructor Create(AOwner: TWinControl;
