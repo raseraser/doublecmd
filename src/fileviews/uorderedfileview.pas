@@ -986,7 +986,9 @@ var
 begin
   Result := False;
   if not RequestActiveFirstNonParent then Exit;
-  RequestActiveFirstNonParent := False;
+  // Don't clear the flag while the file list is empty — ClearFiles fires a
+  // notification before the new load completes; we want to act on the loaded
+  // list, not the cleared one.
   if FFiles.Count = 0 then Exit;
 
   TargetIndex := -1;
@@ -998,6 +1000,7 @@ begin
     end;
   if TargetIndex < 0 then TargetIndex := 0;
 
+  RequestActiveFirstNonParent := False;
   FUpdatingActiveFile := True;
   SetActiveFile(TargetIndex, ScrollTo, -1);
   FUpdatingActiveFile := False;
