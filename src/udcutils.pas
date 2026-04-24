@@ -82,6 +82,14 @@ function ReplaceTilde(const Path: String): String;
 }
 function mbExpandFileName(const sFileName: String): String;
 {en
+   Normalizes a path string that was pasted from clipboard or typed manually:
+   - Trims whitespace
+   - Strips a single pair of surrounding double or single quotes
+   - On Windows, converts MSYS / git-bash style "/c/Users/foo" to "C:\Users\foo"
+   Returns the path unchanged if no transformation applies.
+}
+function NormalizePastedPath(const Path: String): String;
+{en
   Convert Int64 to string with Thousand separators. We can't use FloatToStrF with ffNumber because of integer rounding to thousands
   @param(AValue Integer value)
   @returns(String represenation)
@@ -388,6 +396,38 @@ begin
       Result:= Result.Remove(2, 1);
 {$ENDIF}
   end;
+end;
+
+function NormalizePastedPath(const Path: String): String;
+{$IFDEF MSWINDOWS}
+var
+  Tail: String;
+{$ENDIF}
+begin
+  Result := Trim(Path);
+  if Length(Result) >= 2 then
+  begin
+    if ((Result[1] = '"') and (Result[Length(Result)] = '"')) or
+       ((Result[1] = '''') and (Result[Length(Result)] = '''')) then
+      Result := Trim(Copy(Result, 2, Length(Result) - 2));
+  end;
+
+{$IFDEF MSWINDOWS}
+  // git-bash / MSYS path: "/c", "/c/", "/c/Users/foo"
+  if (Length(Result) >= 2) and (Result[1] = '/') and
+     (Result[2] in ['A'..'Z', 'a'..'z']) and
+     ((Length(Result) = 2) or (Result[3] = '/')) then
+  begin
+    if Length(Result) > 3 then
+    begin
+      Tail := Copy(Result, 4, MaxInt);
+      Tail := StringReplace(Tail, '/', '\', [rfReplaceAll]);
+      Result := UpCase(Result[2]) + ':\' + Tail;
+    end
+    else
+      Result := UpCase(Result[2]) + ':\';
+  end;
+{$ENDIF}
 end;
 
 function IntToStrTS(const APositiveValue: Int64): String;

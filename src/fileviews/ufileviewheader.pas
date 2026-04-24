@@ -236,25 +236,8 @@ begin
 end;
 
 procedure TFileViewHeader.onKeyRETURN(Sender: TObject);
-var
-  NewPath: String;
-  AClass: TFileSourceClass;
 begin
-  NewPath:= ReplaceEnvVars(ReplaceTilde(FPathEdit.Text));
-  NewPath:= mbExpandFileName(Trim(NewPath));
-  AClass:= gVfsModuleList.GetFileSource(NewPath);
-
-  // Check file name on the local file system only
-  if not ((AClass = nil) and mbFileExists(NewPath)) then
-  begin
-    if not ChooseFileSource(FFileView, NewPath, True) then
-      Exit;
-  end
-  else begin
-    if not ChooseFileSource(FFileView, ExtractFileDir(NewPath)) then
-      Exit;
-    FFileView.SetActiveFile(ExtractFileName(NewPath));
-  end;
+  if not NavigatePastedPath(FFileView, FPathEdit.Text) then Exit;
   FPathEdit.Visible := False;
   FFileView.SetFocus;
 end;

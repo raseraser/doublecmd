@@ -138,6 +138,11 @@ type
        in the list on next reload.
     }
     FRequestedActiveFile: String;
+    {en
+       When set, after the next file list load completes the cursor is moved to
+       the first non-".." entry. Cleared once consumed.
+    }
+    FRequestActiveFirstNonParent: Boolean;
     FFilterOptions: TQuickSearchOptions;
     FWatchPath: String;
     FLastMark: String;
@@ -363,6 +368,7 @@ type
     property History: TFileViewHistory read FHistory;
     property LastActiveFile: String read FLastActiveFile write FLastActiveFile;
     property RequestedActiveFile: String read FRequestedActiveFile write FRequestedActiveFile;
+    property RequestActiveFirstNonParent: Boolean read FRequestActiveFirstNonParent write FRequestActiveFirstNonParent;
     property SortingForSorter: TFileSortings read GetSortingForSorter;
     property WorkersThread: TFunctionThread read GetWorkersThread;
 
@@ -783,6 +789,7 @@ begin
     AFileView.FSortingProperties := GetSortingProperties;
     AFileView.FLastActiveFile := Self.FLastActiveFile;
     AFileView.FRequestedActiveFile := Self.FRequestedActiveFile;
+    AFileView.FRequestActiveFirstNonParent := Self.FRequestActiveFirstNonParent;
     AFileView.FReloadNeeded := Self.FReloadNeeded;
 
     if Assigned(Self.FAllDisplayFiles) then

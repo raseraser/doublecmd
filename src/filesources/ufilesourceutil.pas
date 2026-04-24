@@ -28,6 +28,16 @@ function ParseFileSource(var aPath: String; const CurrentFileSource: IFileSource
 
 function ChooseFileSource(aFileView: TFileView; const aPath: String; bLocal: Boolean = False): Boolean; overload;
 
+{en
+   Normalizes a raw path string (strip quotes, convert git-bash format, expand
+   env vars and tilde) and navigates @code(aFileView) to it. If the resolved
+   path points to a local file, navigates to its parent directory and selects
+   that file. If it points to a directory, navigates and focuses the first
+   non-".." entry once the file list loads. Returns @true if navigation was
+   initiated.
+}
+function NavigatePastedPath(aFileView: TFileView; const aRawPath: String): Boolean;
+
 function ChooseArchive(aFileView: TFileView; aFileSource: IFileSource; aFile: TFile; bForce: Boolean = False): Boolean;
 
 function ChooseSpecialFile(aFile: TFile): Boolean;
@@ -49,7 +59,7 @@ implementation
 
 uses
   LCLProc, fFileExecuteYourSelf, uGlobs, uShellExecute, uFindEx, uDebug,
-  uOSUtils, uShowMsg, uLng, uVfsModule, DCOSUtils, DCStrUtils,
+  uOSUtils, uShowMsg, uLng, uVfsModule, DCOSUtils, DCStrUtils, uDCUtils,
   uFileSourceManager,
   uFileSourceOperation,
   uFileSourceExecuteOperation,
@@ -280,6 +290,37 @@ begin
       SetFileSystemPath(aFileView, aPath);
       Result:= mbSetCurrentDir(aPath);
     end;
+end;
+
+function NavigatePastedPath(aFileView: TFileView; const aRawPath: String): Boolean;
+var
+  NewPath: String;
+  AClass: TFileSourceClass;
+  IsLocalFile: Boolean;
+begin
+  Result := False;
+  NewPath := NormalizePastedPath(aRawPath);
+  if NewPath = '' then Exit;
+  NewPath := ReplaceEnvVars(ReplaceTilde(NewPath));
+  NewPath := mbExpandFileName(NewPath);
+  AClass := gVfsModuleList.GetFileSource(NewPath);
+
+  IsLocalFile := (AClass = nil) and mbFileExists(NewPath);
+  if not IsLocalFile then
+  begin
+    if (AClass = nil) and mbDirectoryExists(NewPath) then
+      aFileView.RequestActiveFirstNonParent := True;
+    if not ChooseFileSource(aFileView, NewPath, True) then
+    begin
+      aFileView.RequestActiveFirstNonParent := False;
+      Exit;
+    end;
+  end
+  else begin
+    if not ChooseFileSource(aFileView, ExtractFileDir(NewPath)) then Exit;
+    aFileView.SetActiveFile(ExtractFileName(NewPath));
+  end;
+  Result := True;
 end;
 
 function ChooseArchive(aFileView: TFileView; aFileSource: IFileSource;
