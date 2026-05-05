@@ -57,51 +57,25 @@ git checkout master && git merge upstream/master && git push origin master
 
 ### Build 指令
 
+**一律使用 `scripts/build-custom.sh`，不要手動敲 lazbuild。**
+
 ```bash
-LAZBUILD="C:/lazarus/lazbuild.exe"
-OPTS='--lazarusdir=C:/lazarus --compiler=C:/lazarus/fpc/3.2.2/bin/x86_64-win64/fpc.exe'
-
-# 1. Components
-for pkg in components/chsdet/chsdet.lpk \
-  components/multithreadprocs/multithreadprocslaz.lpk \
-  components/kascrypt/kascrypt.lpk \
-  components/doublecmd/doublecmd_common.lpk \
-  components/Image32/Image32.lpk \
-  components/KASToolBar/kascomp.lpk \
-  components/viewer/viewerpackage.lpk \
-  components/gifview/gifview.lpk \
-  components/synunihighlighter/synuni.lpk \
-  components/virtualterminal/virtualterminal.lpk; do
-  "$LAZBUILD" $OPTS "$pkg"
-done
-
-# 2. Plugins
-for pkg in plugins/wcx/base64/src/base64wcx.lpi \
-  plugins/wcx/deb/src/deb.lpi \
-  plugins/wcx/rpm/src/rpm.lpi \
-  plugins/wcx/sevenzip/src/sevenzipwcx.lpi \
-  plugins/wcx/unrar/src/unrar.lpi \
-  plugins/wcx/zip/src/zip.lpi \
-  plugins/wdx/rpm_wdx/src/rpm_wdx.lpi \
-  plugins/wdx/deb_wdx/src/deb_wdx.lpi \
-  plugins/wdx/audioinfo/src/AudioInfo.lpi \
-  plugins/wfx/ftp/src/ftp.lpi \
-  plugins/wlx/wmp/src/wmp.lpi \
-  plugins/wlx/preview/src/preview.lpi \
-  plugins/wlx/richview/src/richview.lpi; do
-  "$LAZBUILD" $OPTS "$pkg"
-done
-
-# 3. Main executable (release mode)
-"$LAZBUILD" $OPTS src/doublecmd.lpi --bm=release
+scripts/build-custom.sh              # build 主程式 + 部署到 E:\tools\doublecmd\
+scripts/build-custom.sh --full       # 同時重 build components/plugins（首次 / 依賴變更時）
+scripts/build-custom.sh --no-deploy  # 只 build 不部署
 ```
 
-產出：`doublecmd.exe`（專案根目錄）
+Script 強制 `HEAD == custom/main` 才能 build，避免在 feature branch 上 build 出「只有單一 feature 的 exe」（曾踩過：在 `feature/goto-paste-path` 上 build 後 deploy，使用者以為 tab-style / shift-letter 等 feature「失效」，其實是 exe 本來就沒包含）。
+
+可用 env 覆蓋：`LAZBUILD` / `FPC` / `LAZDIR` / `DEPLOY`。
+
+產出：`doublecmd.exe`（專案根目錄）+ 自動 copy 到 `$DEPLOY`（預設 `E:\tools\doublecmd\doublecmd.exe`）。如果目標 exe 正在執行，copy 會失敗並印 PowerShell kill 指令給使用者自己跑（不主動 kill）。
 
 ### Build 注意事項
 - `src/doublecmd.lpr` 使用 `{$R doublecmd.manifest.res}` 而非 `.rc`（windres workaround）
 - `packagefiles.xml` 是 Lazarus build cache，含本機路徑，不要 commit
-- Components 和 Plugins 只需首次或依賴變更時重新 build
+- Components 和 Plugins 只需首次或依賴變更時重新 build（用 `--full`）
+- `scripts/build-custom.sh` 只在 `custom/main` 維護，不會合進 feature branch / 上游
 
 ## 已有的自訂功能
 
