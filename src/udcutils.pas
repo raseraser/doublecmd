@@ -264,7 +264,7 @@ implementation
 
 uses
   Forms, uLng, LCLProc, LCLType, uMasks, FileUtil, StrUtils, uOSUtils, uGlobs, uGlobsPaths,
-  DCStrUtils, DCOSUtils, DCConvertEncoding, LazUTF8
+  DCStrUtils, DCOSUtils, DCConvertEncoding, LazUTF8, uSysFolders
 {$IF DEFINED(MSWINDOWS)}
   , Windows
 {$ENDIF}
@@ -403,8 +403,9 @@ begin
 end;
 
 function NormalizePastedPath(const Path: String): String;
-{$IFDEF MSWINDOWS}
 var
+  HomeDir: String;
+{$IFDEF MSWINDOWS}
   Tail: String;
 {$ENDIF}
 
@@ -446,6 +447,21 @@ begin
     if ((Result[1] = '"') and (Result[Length(Result)] = '"')) or
        ((Result[1] = '''') and (Result[Length(Result)] = '''')) then
       Result := Trim(Copy(Result, 2, Length(Result) - 2));
+  end;
+
+  // ~ home expansion: bare "~", "~/foo", "~\foo" — not "~user/foo"
+  if (Length(Result) >= 1) and (Result[1] = '~') and
+     ((Length(Result) = 1) or (Result[2] in ['/', '\'])) then
+  begin
+    HomeDir := GetHomeDir;
+    if Length(Result) = 1 then
+      Result := HomeDir
+    else
+      Result := HomeDir + Copy(Result, 2, MaxInt);
+{$IFDEF MSWINDOWS}
+    // user typically pastes ~/foo with forward slashes — normalize to backslash on Windows
+    Result := StringReplace(Result, '/', '\', [rfReplaceAll]);
+{$ENDIF}
   end;
 
 {$IFDEF MSWINDOWS}
