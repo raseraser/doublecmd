@@ -145,6 +145,7 @@ done
 ### 7. Paste-Path Navigation (`feature/goto-paste-path`)
 - 路徑編輯框（`cm_EditPath`）+ 新 hotkey `Alt+Shift+D`（`cm_PastePathAndGo`）支援：
   - **git-bash 路徑格式**：`/e/github/foo` → 自動轉成 `E:\github\foo`
+  - **`~` 家目錄展開**：`~/.claude/data` → `C:\Users\<user>\.claude\data`（Windows 取 `USERPROFILE`，*nix 取 `$HOME`）。bare `~` 也能用；`~user/foo` 不展開
   - **單/雙引號自動 strip**：`"E:\foo bar"` → `E:\foo bar`
   - **檔案 → parent 目錄 + select 該檔案**（既有行為，整合進新流程）
   - **目錄 → 進入後游標落在第一個非 `..` 項目**
