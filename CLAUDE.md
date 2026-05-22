@@ -121,11 +121,13 @@ Script 強制 `HEAD == custom/main` 才能 build，避免在 feature branch 上 
   - **git-bash 路徑格式**：`/e/github/foo` → 自動轉成 `E:\github\foo`
   - **`~` 家目錄展開**：`~/.claude/data` → `C:\Users\<user>\.claude\data`（Windows 取 `USERPROFILE`，*nix 取 `$HOME`）。bare `~` 也能用；`~user/foo` 不展開
   - **單/雙引號自動 strip**：`"E:\foo bar"` → `E:\foo bar`
+  - **行折換 (line wrap) 合併**：原 paste 內含 `\n` + 後續空白縮排會被收回單行；wrap 處剛好碰到 `/` 或 `\` 時靜默 join，否則插入一個空格保留可能存在的真實檔名空格
+  - **多餘連續空格自動修復**：含 2+ 連續空格的路徑（terminal wrap padding 或排版誤差），逐 span 嘗試 collapse 0 / 1 空格組合，**只有當變體真實存在 (mbFileExists / mbDirectoryExists)** 才採用；不存在則保持原樣。例：`C:\Users\foo\.     claude\data` → `C:\Users\foo\.claude\data`
   - **檔案 → parent 目錄 + select 該檔案**（既有行為，整合進新流程）
   - **目錄 → 進入後游標落在第一個非 `..` 項目**
 - 修改檔案：
-  - `src/udcutils.pas` — `NormalizePastedPath()` helper（去引號 + git-bash 轉換）
-  - `src/filesources/ufilesourceutil.pas` — `NavigatePastedPath()` 共用導航函式
+  - `src/udcutils.pas` — `NormalizePastedPath()` helper（去引號 + git-bash 轉換 + line wrap 合併 + `~` 展開）；`RepairWhitespacePath()` helper（連續空格 collapse + 存在性驗證）
+  - `src/filesources/ufilesourceutil.pas` — `NavigatePastedPath()` 共用導航函式（local path 場景才呼叫 `RepairWhitespacePath`，避免動到 VFS 路徑）
   - `src/fileviews/ufileview.pas` — 新增 `RequestActiveFirstNonParent: Boolean` public property
   - `src/fileviews/uorderedfileview.pas` — `ConsumeFirstNonParentRequest()` 在 load 完成後選第一個非 `..`
   - `src/fileviews/ucolumnsfileview.pas` + `ufileviewwithgrid.pas` — `DisplayFileListChanged` 內 hook flag
