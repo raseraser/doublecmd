@@ -145,6 +145,22 @@ Script 強制 `HEAD == custom/main` 才能 build，避免在 feature branch 上 
      少了 fmain action → 按 hotkey 系統會 **「ding」** 但無作用（dispatcher 找不到 action）。
   4. **bump `hkVersion`**（`uglobs.pas`）才會讓 `LoadDefaultHotkeyBindings` 重跑進新預設 binding。判斷式是 `HotMan.Version < hkVersion`，沒 bump → 既有 install 的 `shortcuts.scf` 不會吃到新 hotkey。
 
+### 8. Mkdir Full-Path Support (`feature/mkdir-full-path`)
+- F7 (mkdir, `cm_MakeDir`) dialog 輸入支援完整路徑 + 自動建立中間缺失目錄（mkdir -p 行為）。輸入 normalize：
+  - **單/雙引號 strip**：`"E:\foo\bar"` → `E:\foo\bar`
+  - **git-bash 格式**：`/c/Users/foo/lora/raw` → `C:\Users\foo\lora\raw`
+  - **`~` 家目錄展開**：`~/projects/foo/bar` → `C:\Users\<user>\projects\foo\bar`
+  - **forward slash → backslash**（Windows）：`E:/foo/bar/raw/` → `E:\foo\bar\raw\`
+  - **自動建多層**：絕對或相對皆可，中間任意層數不存在都會被一次建起
+- 修改檔案：
+  - `src/udcutils.pas` — `NormalizeMakeDirPath()` helper
+  - `src/umaincommands.pas` — `cm_MakeDir` 在 `ShowMkDir` 回傳後、`CreateCreateDirectoryOperation` 之前呼叫 normalize
+- **踩過的坑 / 根因分析**：
+  1. **`ForceDirectoriesUAC` 對 forward slash 是 silent failure**：它 loop 找 `PathDelim`（Windows = `\`）切 segment 建立每層。對 `E:/foo/bar/` 看不到任何 `\` → loop 完整跑完 → return `Result := True` 但啥都沒建。**必須先把 `/` 換 `\` 才能 work**。
+  2. **`ForceDirectoriesUAC` 對 `E:\` 起頭其實 OK**：Windows API `GetFileAttributesW('E:')` 回 0x10 (FILE_ATTRIBUTE_DIRECTORY) — 被視為 E 槽 current dir 存在，所以 loop 在 `E:` 跳過，從 `E:\foo` 開始建。原本懷疑會在 drive letter 死掉是錯的。
+  3. **`fmkdir.pas` dialog 只做 `TrimPath`**：只 trim 每段尾端的 whitespace/`.`（Windows），不做格式 normalize、不轉 `/`、不展開 `~`。所有 input normalize 都要在 cm_MakeDir 接收 sPath 後自己做。
+  4. **`ShowMkDir` dialog 預設值是 active file 的 NameNoExt**：如果游標在檔案上按 F7，預設帶該檔名（不是空白）。
+
 ---
 
 ## 開發 Tips & 踩過的坑總結
