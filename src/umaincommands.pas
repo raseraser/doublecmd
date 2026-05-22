@@ -2531,6 +2531,12 @@ begin
     if not ShowMkDir(frmMain, sPath) then Exit;   // show makedir dialog
     if (sPath = EmptyStr) then Exit;
 
+    // Normalize raw user input so ForceDirectoriesUAC can walk the chain:
+    // strip quotes, expand ~, convert git-bash "/c/foo" to "C:\foo", and on
+    // Windows replace '/' with '\' (ForceDirectoriesUAC only splits on PathDelim).
+    sPath := NormalizeMakeDirPath(sPath);
+    if (sPath = EmptyStr) then Exit;
+
     if bMakeViaCopy then
     begin
       Directory := GetTempName(GetTempFolderDeletableAtTheEnd, EmptyStr);
