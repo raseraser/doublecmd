@@ -94,6 +94,14 @@ function mbExpandFileName(const sFileName: String): String;
 }
 function NormalizePastedPath(const Path: String): String;
 {en
+   Repairs a path that contains runs of 2+ consecutive spaces likely introduced
+   by terminal wrap padding or copy-paste reformatting. For each run, tries
+   collapsing it to 0 or 1 space and returns the first variant that exists on
+   disk (file or directory). Returns the input unchanged if no run is found or
+   no variant matches.
+}
+function RepairWhitespacePath(const Path: String): String;
+{en
   Convert Int64 to string with Thousand separators. We can't use FloatToStrF with ffNumber because of integer rounding to thousands
   @param(AValue Integer value)
   @returns(String represenation)
@@ -480,6 +488,67 @@ begin
       Result := UpCase(Result[2]) + ':\';
   end;
 {$ENDIF}
+end;
+
+function RepairWhitespacePath(const Path: String): String;
+type
+  TSpan = record StartIdx, EndIdx: Integer end;
+var
+  Spans: array of TSpan;
+  SpanCount, I, J, Cursor: Integer;
+  Variant, MaxVariant: LongWord;
+  Candidate: String;
+begin
+  Result := Path;
+  if Path = '' then Exit;
+
+  SpanCount := 0;
+  I := 1;
+  while I <= Length(Path) do
+  begin
+    if Path[I] = ' ' then
+    begin
+      J := I;
+      while (J <= Length(Path)) and (Path[J] = ' ') do Inc(J);
+      if J - I >= 2 then
+      begin
+        SetLength(Spans, SpanCount + 1);
+        Spans[SpanCount].StartIdx := I;
+        Spans[SpanCount].EndIdx := J - 1;
+        Inc(SpanCount);
+      end;
+      I := J;
+    end
+    else
+      Inc(I);
+  end;
+
+  if SpanCount = 0 then Exit;
+  // cap to a sane number of variants (2^16) to avoid pathological inputs
+  if SpanCount > 16 then SpanCount := 16;
+
+  MaxVariant := (LongWord(1) shl SpanCount) - 1;
+  // Variant=0 means every span collapses to 0 spaces (most common: wrap padding),
+  // MaxVariant means every span keeps 1 space (preserve legitimate single space).
+  for Variant := 0 to MaxVariant do
+  begin
+    Candidate := '';
+    Cursor := 1;
+    for I := 0 to SpanCount - 1 do
+    begin
+      Candidate := Candidate + Copy(Path, Cursor, Spans[I].StartIdx - Cursor);
+      if ((Variant shr I) and 1) = 1 then
+        Candidate := Candidate + ' ';
+      Cursor := Spans[I].EndIdx + 1;
+    end;
+    Candidate := Candidate + Copy(Path, Cursor, MaxInt);
+
+    if mbFileExists(Candidate) or mbDirectoryExists(Candidate) then
+    begin
+      Result := Candidate;
+      Exit;
+    end;
+  end;
 end;
 
 function IntToStrTS(const APositiveValue: Int64): String;

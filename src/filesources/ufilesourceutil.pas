@@ -305,6 +305,12 @@ begin
   NewPath := mbExpandFileName(NewPath);
   AClass := gVfsModuleList.GetFileSource(NewPath);
 
+  // Local-path repair: collapse runs of 2+ consecutive spaces only if the
+  // collapsed variant actually exists on disk. Covers e.g. terminal-wrap
+  // padding that left "C:\Users\foo\.     claude" instead of "...\.claude".
+  if AClass = nil then
+    NewPath := RepairWhitespacePath(NewPath);
+
   IsLocalFile := (AClass = nil) and mbFileExists(NewPath);
   if not IsLocalFile then
   begin
