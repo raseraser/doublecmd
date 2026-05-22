@@ -102,6 +102,17 @@ function NormalizePastedPath(const Path: String): String;
 }
 function RepairWhitespacePath(const Path: String): String;
 {en
+   Normalize the user-typed path from the Make Directory dialog so that
+   ForceDirectoriesUAC can build the full chain:
+   - Trim whitespace
+   - Strip a single pair of surrounding double or single quotes
+   - Expand a leading '~', '~/', '~\' to the user's home directory
+   - On Windows, convert MSYS / git-bash "/c/Users/foo" to "C:\Users\foo"
+   - On Windows, replace '/' with '\' so segments split on PathDelim
+   Returns the input unchanged if no transformation applies.
+}
+function NormalizeMakeDirPath(const Path: String): String;
+{en
   Convert Int64 to string with Thousand separators. We can't use FloatToStrF with ffNumber because of integer rounding to thousands
   @param(AValue Integer value)
   @returns(String represenation)
@@ -549,6 +560,52 @@ begin
       Exit;
     end;
   end;
+end;
+
+function NormalizeMakeDirPath(const Path: String): String;
+var
+  HomeDir: String;
+{$IFDEF MSWINDOWS}
+  Tail: String;
+{$ENDIF}
+begin
+  Result := Trim(Path);
+  if Length(Result) >= 2 then
+  begin
+    if ((Result[1] = '"') and (Result[Length(Result)] = '"')) or
+       ((Result[1] = '''') and (Result[Length(Result)] = '''')) then
+      Result := Trim(Copy(Result, 2, Length(Result) - 2));
+  end;
+
+  // ~ home expansion: bare "~", "~/foo", "~\foo" — not "~user/foo"
+  if (Length(Result) >= 1) and (Result[1] = '~') and
+     ((Length(Result) = 1) or (Result[2] in ['/', '\'])) then
+  begin
+    HomeDir := GetHomeDir;
+    if Length(Result) = 1 then
+      Result := HomeDir
+    else
+      Result := HomeDir + Copy(Result, 2, MaxInt);
+  end;
+
+{$IFDEF MSWINDOWS}
+  // git-bash / MSYS path: "/c", "/c/", "/c/Users/foo"
+  if (Length(Result) >= 2) and (Result[1] = '/') and
+     (Result[2] in ['A'..'Z', 'a'..'z']) and
+     ((Length(Result) = 2) or (Result[3] = '/')) then
+  begin
+    if Length(Result) > 3 then
+    begin
+      Tail := Copy(Result, 4, MaxInt);
+      Result := UpCase(Result[2]) + ':\' + Tail;
+    end
+    else
+      Result := UpCase(Result[2]) + ':\';
+  end;
+
+  // forward slash to backslash so ForceDirectoriesUAC can split on PathDelim
+  Result := StringReplace(Result, '/', '\', [rfReplaceAll]);
+{$ENDIF}
 end;
 
 function IntToStrTS(const APositiveValue: Int64): String;
