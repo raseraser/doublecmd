@@ -2503,6 +2503,7 @@ var
   bMakeViaCopy: Boolean = False;
   Operation: TFileSourceOperation = nil;
   UI: TFileSourceOperationMessageBoxesUI = nil;
+  AbsNewPath, ParentOfNew, CurrentDir: String;
 begin
   with frmMain do
   try
@@ -2565,8 +2566,24 @@ begin
       Operation.AddUserInterface(UI);
       Operation.Execute;
 
-      sPath := ExtractFileName(ExcludeTrailingPathDelimiter(sPath));
-      ActiveFrame.SetActiveFile(sPath);
+      // If the new directory sits below the active panel (multi-level path
+      // like "lora_training/raw" or an absolute path pointing elsewhere),
+      // SetActiveFile can't find it because it's not in the current listing.
+      // Navigate into the new directory so the user actually lands there.
+      // For a plain single-level child, keep the original behaviour: just
+      // move the cursor onto the new entry.
+      if DCStrUtils.GetPathType(sPath) = ptAbsolute then
+        AbsNewPath := ExcludeTrailingPathDelimiter(sPath)
+      else
+        AbsNewPath := ExcludeTrailingPathDelimiter(
+                        IncludeTrailingPathDelimiter(ActiveFrame.CurrentPath) + sPath);
+      ParentOfNew := IncludeTrailingPathDelimiter(ExtractFileDir(AbsNewPath));
+      CurrentDir := IncludeTrailingPathDelimiter(ActiveFrame.CurrentPath);
+
+      if SameText(ParentOfNew, CurrentDir) then
+        ActiveFrame.SetActiveFile(ExtractFileName(AbsNewPath))
+      else
+        ActiveFrame.CurrentPath := IncludeTrailingPathDelimiter(AbsNewPath);
     end;
   finally
     FreeAndNil(Operation);
