@@ -152,14 +152,17 @@ Script 強制 `HEAD == custom/main` 才能 build，避免在 feature branch 上 
   - **`~` 家目錄展開**：`~/projects/foo/bar` → `C:\Users\<user>\projects\foo\bar`
   - **forward slash → backslash**（Windows）：`E:/foo/bar/raw/` → `E:\foo\bar\raw\`
   - **自動建多層**：絕對或相對皆可，中間任意層數不存在都會被一次建起
+  - **建完自動 navigate 進新目錄**：若新目錄的 parent ≠ 目前 panel path（跨層或絕對路徑指他處），自動把 panel 切到新目錄。單層直接子目錄維持上游 `SetActiveFile`（cursor 移過去）行為
 - 修改檔案：
   - `src/udcutils.pas` — `NormalizeMakeDirPath()` helper
-  - `src/umaincommands.pas` — `cm_MakeDir` 在 `ShowMkDir` 回傳後、`CreateCreateDirectoryOperation` 之前呼叫 normalize
+  - `src/umaincommands.pas` — `cm_MakeDir` 在 `ShowMkDir` 回傳後、`CreateCreateDirectoryOperation` 之前呼叫 normalize；尾段判斷新目錄是否跨層，決定 `SetActiveFile` 或 `CurrentPath :=`
 - **踩過的坑 / 根因分析**：
   1. **`ForceDirectoriesUAC` 對 forward slash 是 silent failure**：它 loop 找 `PathDelim`（Windows = `\`）切 segment 建立每層。對 `E:/foo/bar/` 看不到任何 `\` → loop 完整跑完 → return `Result := True` 但啥都沒建。**必須先把 `/` 換 `\` 才能 work**。
   2. **`ForceDirectoriesUAC` 對 `E:\` 起頭其實 OK**：Windows API `GetFileAttributesW('E:')` 回 0x10 (FILE_ATTRIBUTE_DIRECTORY) — 被視為 E 槽 current dir 存在，所以 loop 在 `E:` 跳過，從 `E:\foo` 開始建。原本懷疑會在 drive letter 死掉是錯的。
   3. **`fmkdir.pas` dialog 只做 `TrimPath`**：只 trim 每段尾端的 whitespace/`.`（Windows），不做格式 normalize、不轉 `/`、不展開 `~`。所有 input normalize 都要在 cm_MakeDir 接收 sPath 後自己做。
   4. **`ShowMkDir` dialog 預設值是 active file 的 NameNoExt**：如果游標在檔案上按 F7，預設帶該檔名（不是空白）。
+  5. **上游 `SetActiveFile(name)` 只在 current listing 找**：mkdir 完叫它 select 跨層的新目錄一定 silent miss（new dir 不在 panel 顯示中），體感像「啥都沒發生」。要嘛 navigate 進去，要嘛先把 panel 切到 parent 再 SetActiveFile。我們選前者。
+  6. **GetPathType 有兩個版本**：`DCStrUtils.GetPathType` (free function) 認 Windows drive letter `E:` 為 absolute；`TFileSource.GetPathType` (default method) 只認 leading `/`。`TFileSystemFileSource.GetPathType` override 回去呼叫前者。寫 logic 時用前者比較不會被 base class 騙到。
 
 ---
 
